@@ -5,6 +5,7 @@ import time
 import numpy as np
 import mineSerial
 import wx
+import sys
 
 class GUIDraw:
 
@@ -150,44 +151,60 @@ class GUIDraw:
                        fontHeight,(255,255,255),-1,cv2.LINE_AA,True)
         #### Save empty box and graph
         self.boxSave,self.graphSave = self.GUISnapshot(frame)
-        return frame
 
-    def updateGUI(self,valHolder):
-        w,h = (self.w,self.h)
-        space = self.space
-        prevPoint = self.prevPoint
-        startTime = self.startTime
-        currPoint = self.currPoint
-        plotHolder = self.plotHolder
-        boxSave = self.boxSave
-        graphSave = self.graphSave
-        graphNum = self.graphNum
+    def updateGUI(self,serQueue):
 
-        currTime = time.time() - startTime
-        xAxisTime = currTime*((.75*w-4*space)/10)+(w//4+10*space)
+        while True:
+            windName = 'RespGUI'
+            w,h = (self.w,self.h)
+            space = self.space
+            prevPoint = self.prevPoint
+            startTime = self.startTime
+            currPoint = self.currPoint
+            plotHolder = self.plotHolder
+            boxSave = self.boxSave
+            graphSave = self.graphSave
+            graphNum = self.graphNum
+            FullValHolder = [[0,0,0,0,time.time()]]
 
-        #### Redraw GUI from previous frame
-        frame = self.retrievePreviousFrame(boxSave,graphSave,prevPoint,xAxisTime)
+            if serQueue.getSize() > 0:
+                FullValHolder = serQueue.getAll()
 
-        #### Update numbers in boxes
-        frame = self.updateBoxes(frame,valHolder)
+            currTime = FullValHolder[-1][4] - startTime
+            xAxisTime = currTime*((.75*w-4*space)/10)+(w//4+10*space)
 
-        #### Plot graphs
-        frame = self.updateGraphs(frame,valHolder,plotHolder,currPoint,prevPoint,xAxisTime)
+            #### Redraw GUI from previous frame
+            frame = self.retrievePreviousFrame(boxSave,graphSave,prevPoint,xAxisTime)
 
-        #### Save current graph
-        _,self.graphSave = self.GUISnapshot(frame)
-        self.prevPoint = currPoint
+            #### Plot graphs
+            frame = self.updateGraphs(frame,FullValHolder,plotHolder,currPoint,prevPoint,xAxisTime)
 
-        #### If 10 seconds have elapsed, restart plot collection
-        if currTime>10:
-            self.prevPoint = list()
-            self.plotHolder = list()
-            for i in range(graphNum):
-                self.prevPoint.append((round(w//4+10*space),round((h//(graphNum*2))+(i*h//graphNum))))
-                self.plotHolder.append(list())
-            self.updateTime()
-        return frame
+            #### Save current graph
+            _,self.graphSave = self.GUISnapshot(frame)
+            self.prevPoint = currPoint
+
+            #### Update numbers in boxes
+            frame = self.updateBoxes(frame,FullValHolder[-1])
+
+            #### If 10 seconds have elapsed, restart plot collection
+            if currTime>10:
+                self.prevPoint = list()
+                self.plotHolder = list()
+                for i in range(graphNum):
+                    self.prevPoint.append((round(w//4+10*space),round((h//(graphNum*2))+(i*h//graphNum))))
+                    self.plotHolder.append(list())
+                self.updateTime()
+
+            #### Show GUI in full screen
+            cv2.imshow(windName,frame)
+            cv2.namedWindow(windName,cv2.WND_PROP_FULLSCREEN)
+            cv2.setWindowProperty(windName,cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+
+            #### To stop GUI, press "q" on keyboard
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord("q"):
+                sys.exit()
+                break
 
 
     def GUISnapshot(self,frame):
@@ -217,6 +234,12 @@ class GUIDraw:
         ft = self.ft
         alarmHolder = self.alarmHolder
 
+        valHolder = [float(valHolder[0]),
+                     float(valHolder[1]),
+                     float(valHolder[2]),
+                     float(valHolder[3]),
+                     float(valHolder[4])]
+
         for i in range(boxNum):
             #Value
             text = str(round(valHolder[i],1))
@@ -234,10 +257,11 @@ class GUIDraw:
                            fontHeight,(0,0,255),-1,cv2.LINE_AA,True)
         return frame
 
-    def updateGraphs(self,frame,valHolder,plotHolder,currPoint,prevPoint,xAxisTime):
+    def updateGraphs(self,frame,FullValHolder,plotHolder,currPoint,prevPoint,xAxisTime):
 
         w,h = (self.w,self.h)
         space = self.space
+        startTime = self.startTime
         graphNum = self.graphNum
         axisHolder = self.axisHolder
         colorHolder = self.colorHolder
@@ -266,9 +290,18 @@ class GUIDraw:
                          2)
 
             # Adjust data to graph axes
-            plotHolder[i].append((round(xAxisTime),
-                                  ((-valHolder[i]/axisHolder[i])*(h//(graphNum*2)-space)+(h//(graphNum*2))+(i*h//graphNum))))
-            currPoint[i] = (xAxisTime,
+            for vals in FullValHolder:
+                valHolder = [float(vals[0]),
+                             float(vals[1]),
+                             float(vals[2]),
+                             float(vals[3]),
+                             float(vals[4])]
+                currTimeNow = valHolder[4] - startTime
+                xAxisTimeNow = currTimeNow*((.75*w-4*space)/10)+(w//4+10*space)
+                plotHolder[i].append((round(xAxisTimeNow),
+                                      ((-valHolder[i]/axisHolder[i])*(h//(graphNum*2)-space)+(h//(graphNum*2))+(i*h//graphNum))))
+
+            self.currPoint[i] = (xAxisTime,
                             (-valHolder[i]/axisHolder[i])*(h//(graphNum*2)-space)+(h//(graphNum*2))+(i*h//graphNum))
             # Plot data
             cv2.polylines(frame,np.int32([plotHolder[i]]),False,colorHolder[i],2)
