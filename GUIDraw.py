@@ -27,6 +27,7 @@ class GUIDraw:
         self.currPoint = list()
         self.plotHolder = list()
         self.valHolder = None
+        self.gotten = False
         
     def drawInitialScreen(self):
 
@@ -165,10 +166,14 @@ class GUIDraw:
             boxSave = self.boxSave
             graphSave = self.graphSave
             graphNum = self.graphNum
-            FullValHolder = [[0,0,0,0,time.time()]]
+
+            if not self.gotten:
+                FullValHolder = [[0,0,0,0,time.time()]]
 
             if serQueue.getSize() > 0:
                 FullValHolder = serQueue.getAll()
+                if not self.gotten:
+                    self.gotten = True
 
             currTime = FullValHolder[-1][4] - startTime
             xAxisTime = currTime*((.75*w-4*space)/10)+(w//4+10*space)
