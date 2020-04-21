@@ -6,6 +6,7 @@ import numpy as np
 import mineSerial
 import subprocess
 
+OnPi = False
 try:
     import wx
 except ImportError:
