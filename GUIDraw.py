@@ -4,15 +4,31 @@ import cv2
 import time
 import numpy as np
 import mineSerial
-import wx
+import subprocess
+
+try:
+    import wx
+except ImportError:
+    OnPi = True
 import sys
 
 class GUIDraw:
 
     def __init__(self,space,boxNum,graphNum,axisHolder,alarmHolder,labelHolder):
-
-        app = wx.App(False)
-        self.w,self.h = wx.GetDisplaySize()
+        if OnPi:
+            cmd = ['xrandr']
+            cmd2 = ['grep','*']
+            p = subprocess.Popen(cmd,stdout=subprocess.PIPE)
+            p2 = subprocess.Popen(cmd2,stdin=p.stdout,stdout=subprocess.PIPE)
+            p.stdout.close()
+            resolution_string,junk = p2.communicate()
+            resolution = resolution_string.split()[0]
+            self.w,self.h= resolution.decode().split('x')
+            self.w = int(self.w)
+            self.h = int(self.h)
+        else:
+            app = wx.App(False)
+            self.w,self.h = wx.GetDisplaySize()
         self.space = space
         self.alpha = .5
         self.boxNum = boxNum
@@ -80,7 +96,7 @@ class GUIDraw:
             fontHeight = 40
             widthText,heightText = ft.getTextSize(text,fontHeight,-1)[0]
             textX = 3*space//2
-            textY = (h//boxNum*i) + space + space//2*(i==0) + heightText
+            textY = space*(i+1)+((h-6*space)//boxNum)*i+2*space+fontHeight//2
             ft.putText(frame,text,
                        (textX,textY),
                        fontHeight,(255,255,255),-1,cv2.LINE_AA,True)
@@ -127,7 +143,7 @@ class GUIDraw:
             fontHeight = 20
             widthText,heightText = ft.getTextSize(text,fontHeight,-1)[0]
             textX = (w//4+round(5*space))-widthText//2
-            textY = (h//(graphNum*2))+(i*h//graphNum) + round(1.1*heightText)
+            textY = (h//(graphNum*2))+(i*h//graphNum) + fontHeight
             ft.putText(frame,text,
                        (textX,textY),
                        fontHeight,(255,255,255),-1,cv2.LINE_AA,True)
@@ -137,7 +153,7 @@ class GUIDraw:
             fontHeight = 20
             widthText,heightText = ft.getTextSize(text,fontHeight,-1)[0]
             textX = int((w//4+9.5*space)-widthText)
-            textY = int((i*h//graphNum) + heightText + space)
+            textY = int((i*h//graphNum) + fontHeight)
             ft.putText(frame,text,
                        (textX,textY),
                        fontHeight,(255,255,255),-1,cv2.LINE_AA,True)

@@ -36,56 +36,56 @@ drawGUI = GUIDraw(space,boxNum,graphNum,axisHolder,alarmHolder,labelHolder)
 drawGUI.drawInitialScreen()
 
 vals = list()
+valHolder = list()
 for i in range(boxNum):
     vals.append(0)
+    valHolder.append(0)
+
 
 #### Open serial port
-ser = mineSerial.mineSerial("/dev/cu.usbmodem142201",115200)
-ser.flushInput()
+#ser = mineSerial.mineSerial("/dev/cu.usbmodem142201",115200)
+#ser.flushInput()
+    
 serQueue = ItemStore()
 
 drawGUI.updateTime()
 
-valHolder = [float(vals[0]),
-             float(vals[1]),
-             float(vals[2]),
-             float(vals[3])]
 
-def getSer():
-    partial = None
-    while True:
-        bytesToRead = ser.inWaiting()
-        if bytesToRead>0:
-            wholeSer = ser.read(bytesToRead).decode(errors='ignore')
-            # print(wholeSer)
-            if wholeSer and partial is None and (wholeSer[0] is 'S') and (wholeSer[-1] is '\n'):
-                stripped = wholeSer.rstrip()
-                removeHeader = stripped.split('S')[1]
-                full = removeHeader.split(' ')
-                full.append(time.time())
-                serQueue.put(full)
-                # print(full)
-            elif wholeSer and partial is None and (wholeSer[0] is 'S') and (wholeSer[-1] is not '\n'):
-                stripped = wholeSer
-                partial = stripped
-            elif wholeSer and partial is not None and (wholeSer[0] is not 'S') and (wholeSer[-1] is not '\n'):
-                stripped = wholeSer
-                partial = partial + stripped
-            elif wholeSer and partial is not None and (wholeSer[0] is not 'S') and (wholeSer[-1] is '\n'):
-                stripped = wholeSer
-                stripped = partial + stripped
-                stripped = stripped.rstrip()
-                removeHeader = stripped.split('S')[1]
-                full = removeHeader.split(' ')
-                full.append(time.time())
-                serQueue.put(full)
-                # print(full)
-                partial = None
-
-
-t1 = Thread(target = getSer)
-t1.daemon = True
-t1.start()
+#def getSer():
+#    partial = None
+#    while True:
+#        bytesToRead = ser.inWaiting()
+#        if bytesToRead>0:
+#            wholeSer = ser.read(bytesToRead).decode(errors='ignore')
+#            # print(wholeSer)
+#            if wholeSer and partial is None and (wholeSer[0] is 'S') and (wholeSer[-1] is '\n'):
+#                stripped = wholeSer.rstrip()
+#                removeHeader = stripped.split('S')[1]
+#                full = removeHeader.split(' ')
+#                full.append(time.time())
+#                serQueue.put(full)
+#                # print(full)
+#            elif wholeSer and partial is None and (wholeSer[0] is 'S') and (wholeSer[-1] is not '\n'):
+#                stripped = wholeSer
+#                partial = stripped
+#            elif wholeSer and partial is not None and (wholeSer[0] is not 'S') and (wholeSer[-1] is not '\n'):
+#                stripped = wholeSer
+#                partial = partial + stripped
+#            elif wholeSer and partial is not None and (wholeSer[0] is not 'S') and (wholeSer[-1] is '\n'):
+#                stripped = wholeSer
+#                stripped = partial + stripped
+#                stripped = stripped.rstrip()
+#                removeHeader = stripped.split('S')[1]
+#                full = removeHeader.split(' ')
+#                full.append(time.time())
+#                serQueue.put(full)
+#                # print(full)
+#                partial = None
+#
+#
+#t1 = Thread(target = getSer)
+#t1.daemon = True
+#t1.start()
 drawGUI.updateGUI(serQueue)
 
 # while True:
